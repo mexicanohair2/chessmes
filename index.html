@@ -78,7 +78,7 @@ function render(){const g=positionAt(index), board=$('board');board.innerHTML=''
  document.querySelectorAll('.move-chip').forEach((b)=>b.classList.toggle('active',Number(b.dataset.ply)===index));
  showAnalysis();
 }
-function showAnalysis(){const box=$('analysis');if(index===0){box.innerHTML='<div class="muted">Начальная позиция. Нажмите →, чтобы воспроизвести первый ход.</div>';return}const m=history[index-1],side=m.color==='w'?'Белые':'Чёрные',info=evalCache[index];if(!info){box.innerHTML='<div class="grade">⌛ Анализ</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">Позиция загружена. Запустите анализ Stockfish, чтобы получить точную оценку и лучший вариант.</div><div class="eval" id="evalNow"></div>';return}box.innerHTML='<div class="grade">'+info.icon+' '+info.label+'</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">'+info.text+'</div><p class="eval">'+(info.score||'')+(info.best?' · Лучший ход: '+info.best:'')+'</p>'}
+function showAnalysis(){const box=$('analysis');if(index===0){box.innerHTML='<div class="muted">Начальная позиция. Нажмите →, чтобы воспроизвести первый ход.</div>';return}const m=history[index-1],side=m.color==='w'?'Белые':'Чёрные',info=evalCache[index];if(!info){box.innerHTML='<div class="grade">⌛ Анализ</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">Stockfish 16 анализирует этот ход. Результат появится автоматически.</div><div class="eval" id="evalNow"></div>';return}box.innerHTML='<div class="grade">'+info.icon+' '+info.label+'</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">'+info.text+'</div><p class="eval">'+(info.score||'')+(info.best?' · Лучший ход: '+info.best:'')+'</p>'}
 function renderMoves(){const el=$('moves');el.innerHTML='';history.forEach((m,i)=>{const n=i+1,info=evalCache[n],b=document.createElement('button');b.className='move-chip';b.dataset.ply=n;b.textContent=(i%2===0?Math.floor(i/2)+1+'. ':'')+m.san+(info?'  '+info.icon:'');b.title=info?info.label:'Ожидает анализа Stockfish';b.onclick=()=>{index=n;render()};el.append(b)})}
 function setPgn(pgn){const parsed=parse(pgn);history=parsed.h;index=0;evalCache={};const w=headers(pgn,'White')||'Белые',b=headers(pgn,'Black')||'Чёрные';$('whiteName').textContent=w;$('blackName').textContent=b;const nick=$('nick').value.trim().toLowerCase();userColor=nick&&nick===w.toLowerCase()?'w':nick&&nick===b.toLowerCase()?'b':'w';$('whiteRole').textContent=userColor==='w'?'Вы':'Соперник';$('blackRole').textContent=userColor==='b'?'Вы':'Соперник';if(nick&&nick!==w.toLowerCase()&&nick!==b.toLowerCase())$('loadStatus').textContent='Ник не совпал с именами игроков PGN. Доска показана со стороны белых.';else $('loadStatus').textContent='Партия загружена: '+history.length+' полуходов. Стрелки листают по одному полуходу.';renderMoves();render()}
 $('prev').onclick=()=>{if(index>0){index--;render()}};$('next').onclick=()=>{if(index<history.length){index++;render()}};
@@ -158,3 +158,6 @@ function analyzeCurrent(){
 const baseRender=render;
 render=function(){baseRender();analyzeCurrent()};
 queueFullGame();
+</script>
+</body>
+</html>
