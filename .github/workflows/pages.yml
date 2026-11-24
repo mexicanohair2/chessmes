@@ -57,7 +57,8 @@ jobs:
           mkdir -p /tmp/chessjs
           tar -xzf chess.js-0.10.3.tgz -C /tmp/chessjs
           cat > /tmp/check-pgn.js <<'JS'
-          const Chess = require('/tmp/chessjs/package');
+          const ChessModule = require('/tmp/chessjs/package');
+          const Chess = ChessModule.Chess || ChessModule;
           const fs = require('fs');
           const pgn = JSON.parse(fs.readFileSync('/tmp/chessmes-pgn.json', 'utf8'));
           const game = new Chess();
