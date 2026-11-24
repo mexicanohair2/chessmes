@@ -28,7 +28,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 18px 28px;color:#7f8994;font-siz
 <header><div class="brand">CHESS<span>MES</span></div><div class="status">Разбор шахматных партий</div></header>
 <main>
 <section class="panel board-panel">
- <div class="players"><div class="player"><div class="avatar">♙</div><div><div id="blackName">Чёрные</div><div class="rating">Соперник</div></div></div><div class="player"><div class="avatar">♙</div><div><div id="whiteName">Белые</div><div class="rating">Вы</div></div></div></div>
+ <div class="players"><div class="player"><div class="avatar">♙</div><div><div id="blackName">Чёрные</div><div class="rating" id="blackRole">Соперник</div></div></div><div class="player"><div class="avatar">♙</div><div><div id="whiteName">Белые</div><div class="rating" id="whiteRole">Вы</div></div></div></div>
  <div id="board" aria-label="Шахматная доска"></div>
  <div class="controls">
   <button class="nav" id="prev" aria-label="Предыдущий ход">←</button>
@@ -79,27 +79,27 @@ function render(){const g=positionAt(index), board=$('board');board.innerHTML=''
  showAnalysis();
 }
 function showAnalysis(){const box=$('analysis');if(index===0){box.innerHTML='<div class="muted">Начальная позиция. Нажмите →, чтобы воспроизвести первый ход.</div>';return}const m=history[index-1],side=m.color==='w'?'Белые':'Чёрные',info=evalCache[index];if(!info){box.innerHTML='<div class="grade">⌛ Анализ</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">Позиция загружена. Запустите анализ Stockfish, чтобы получить точную оценку и лучший вариант.</div><div class="eval" id="evalNow"></div>';return}box.innerHTML='<div class="grade">'+info.icon+' '+info.label+'</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">'+info.text+'</div><p class="eval">'+(info.score||'')+(info.best?' · Лучший ход: '+info.best:'')+'</p>'}
-function renderMoves(){const el=$('moves');el.innerHTML='';history.forEach((m,i)=>{const b=document.createElement('button');b.className='move-chip';b.dataset.ply=i+1;b.textContent=(i%2===0?Math.floor(i/2)+1+'. ':'')+m.san;b.onclick=()=>{index=i+1;render()};el.append(b)})}
-function setPgn(pgn){const parsed=parse(pgn);history=parsed.h;index=0;evalCache={};const w=headers(pgn,'White')||'Белые',b=headers(pgn,'Black')||'Чёрные';$('whiteName').textContent=w;$('blackName').textContent=b;const nick=$('nick').value.trim().toLowerCase();userColor=nick&&nick===w.toLowerCase()?'w':nick&&nick===b.toLowerCase()?'b':'w';if(nick&&nick!==w.toLowerCase()&&nick!==b.toLowerCase())$('loadStatus').textContent='Ник не совпал с именами игроков PGN. Доска показана со стороны белых.';else $('loadStatus').textContent='Партия загружена: '+history.length+' полуходов. Стрелки листают по одному ходу.';renderMoves();render()}
+function renderMoves(){const el=$('moves');el.innerHTML='';history.forEach((m,i)=>{const n=i+1,info=evalCache[n],b=document.createElement('button');b.className='move-chip';b.dataset.ply=n;b.textContent=(i%2===0?Math.floor(i/2)+1+'. ':'')+m.san+(info?'  '+info.icon:'');b.title=info?info.label:'Ожидает анализа Stockfish';b.onclick=()=>{index=n;render()};el.append(b)})}
+function setPgn(pgn){const parsed=parse(pgn);history=parsed.h;index=0;evalCache={};const w=headers(pgn,'White')||'Белые',b=headers(pgn,'Black')||'Чёрные';$('whiteName').textContent=w;$('blackName').textContent=b;const nick=$('nick').value.trim().toLowerCase();userColor=nick&&nick===w.toLowerCase()?'w':nick&&nick===b.toLowerCase()?'b':'w';$('whiteRole').textContent=userColor==='w'?'Вы':'Соперник';$('blackRole').textContent=userColor==='b'?'Вы':'Соперник';if(nick&&nick!==w.toLowerCase()&&nick!==b.toLowerCase())$('loadStatus').textContent='Ник не совпал с именами игроков PGN. Доска показана со стороны белых.';else $('loadStatus').textContent='Партия загружена: '+history.length+' полуходов. Стрелки листают по одному полуходу.';renderMoves();render()}
 $('prev').onclick=()=>{if(index>0){index--;render()}};$('next').onclick=()=>{if(index<history.length){index++;render()}};
 $('load').onclick=async()=>{let pgn=$('pgn').value.trim();if(!pgn){const url=$('gameUrl').value.trim(),nick=$('nick').value.trim();if(!url){$('loadStatus').textContent='Вставьте PGN или ссылку на партию.';return}if(!nick){$('loadStatus').textContent='Для загрузки по ссылке укажите ник одного из игроков.';return}try{$('loadStatus').textContent='Ищу партию в публичном архиве Chess.com…';const archives=await fetch('https://api.chess.com/pub/player/'+encodeURIComponent(nick.toLowerCase())+'/games/archives').then(r=>{if(!r.ok)throw Error();return r.json()});const id=(url.match(/(\d{6,})\/?(?:\?.*)?$/)||[])[1];if(!id)throw Error('Не удалось определить ID партии из ссылки.');let found=null;for(const a of (archives.archives||[]).slice(-18).reverse()){const month=await fetch(a).then(r=>r.json());found=(month.games||[]).find(x=>String(x.url).includes(id));if(found)break}if(!found?.pgn)throw Error('Партия не найдена в доступном публичном архиве. Вставьте PGN вручную.');pgn=found.pgn;$('pgn').value=pgn}catch(e){$('loadStatus').textContent=e.message||'Не удалось получить партию. Вставьте PGN вручную.';return}}
  try{setPgn(pgn)}catch(e){$('loadStatus').textContent=e.message}}
 $('pgn').value=START_PGN;setPgn(START_PGN);
-let engineBusy=false, queuedIndex=0, activeJob=null, analysisToken=0;
+let engineBusy=false, activeJob=null, analysisQueue=[], engineFailed=false;
+function materialBalance(g,color){const vals={p:1,n:3,b:3,r:5,q:9};let total=0;for(const f of 'abcdefgh')for(let r=1;r<=8;r++){const p=g.get(f+r);if(p&&p.type!=='k')total+=(p.color===color?1:-1)*vals[p.type]}return total}
+function uciToSan(fen,uci){try{const g=new Chess();g.load(fen);const m={from:uci.slice(0,2),to:uci.slice(2,4)};if(uci.length>4)m.promotion=uci[4];const made=g.move(m);return made?made.san:uci}catch{return uci}}
 function startQueuedAnalysis(){
- if(!engineReady||engineBusy||!queuedIndex)return;
- const n=queuedIndex;queuedIndex=0;
- if(n<1||n>history.length||evalCache[n])return;
- const before=positionAt(n-1),after=positionAt(n),token=++analysisToken;
- activeJob={n,token,phase:'before',best:'',scoreBefore:null,scoreAfter:null,latest:null};
- engineBusy=true;
- engine.postMessage('ucinewgame');
- engine.postMessage('position fen '+before.fen());
- engine.postMessage('go depth 12');
- $('analysis').innerHTML='<div class="grade">⌛ Stockfish 16</div><div class="move-title">'+(history[n-1].color==='w'?'Белые':'Чёрные')+': '+history[n-1].san+'</div><div class="advice">Движок оценивает позицию до и после хода. Это может занять несколько секунд.</div>';
+ if(!engineReady||engineBusy||!analysisQueue.length||engineFailed)return;
+ let n=analysisQueue.shift();
+ while(n&&evalCache[n])n=analysisQueue.shift();
+ if(!n)return;
+ const before=positionAt(n-1),after=positionAt(n),token={n,phase:'before',best:'',before:null,after:null,latest:null};
+ activeJob=token;engineBusy=true;
+ if(index===n)showAnalysis();
+ engine.postMessage('ucinewgame');engine.postMessage('position fen '+before.fen());engine.postMessage('go depth 14');
 }
 function initEngine(){
- if(engine)return;
+ if(engine||engineFailed)return;
  try{
   engine=new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16-single.js');
   engine.onmessage=e=>{
@@ -109,52 +109,51 @@ function initEngine(){
    if(!activeJob)return;
    const job=activeJob;
    if(line.startsWith('info ')&&line.includes(' score ')){
-    const cp=line.match(/ score cp (-?\d+)/),mate=line.match(/ score mate (-?\d+)/);
-    if(cp)job.latest={type:'cp',value:Number(cp[1])};
-    else if(mate)job.latest={type:'mate',value:Number(mate[1])};
+    const cp=line.match(/ score cp (-?\\d+)/),mate=line.match(/ score mate (-?\\d+)/);
+    if(cp)job.latest={type:'cp',value:Number(cp[1])};else if(mate)job.latest={type:'mate',value:Number(mate[1])};
     return;
    }
-   if(line.startsWith('bestmove')){
-    if(job.token!==analysisToken){activeJob=null;engineBusy=false;startQueuedAnalysis();return}
-    const best=line.split(/\s+/)[1]||'';
-    if(job.phase==='before'){
-     job.best=best;job.scoreBefore=job.latest;job.latest=null;job.phase='after';
-     engine.postMessage('position fen '+positionAt(job.n).fen());
-     engine.postMessage('go depth 12');
-    }else{
-     job.scoreAfter=job.latest;
-     const toCp=s=>!s?0:s.type==='mate'?(s.value>0?10000-Math.abs(s.value)*10:-10000+Math.abs(s.value)*10):s.value;
-     const before=toCp(job.scoreBefore);
-     const afterForMover=-toCp(job.scoreAfter);
-     const loss=Math.max(0,before-afterForMover);
-     const played=history[job.n-1].from+history[job.n-1].to+(history[job.n-1].promotion||'');
-     let label,icon,tip;
-     if(best===played){label='Лучший ход';icon='◆';tip='Вы сыграли лучший ход по расчёту Stockfish на этой глубине.'}
-     else if(loss<=25){label='Отличный ход';icon='★';tip='Ход почти не ухудшил оценку позиции. Существенно лучшего практического решения движок не показывает.'}
-     else if(loss<=65){label='Хороший ход';icon='✓';tip='Ход сохраняет большую часть преимуществ. Можно было сыграть немного точнее.'}
-     else if(loss<=130){label='Неточность';icon='?!';tip='После этого хода оценка позиции ухудшилась. Стоило проверить более активный вариант.'}
-     else if(loss<=250){label='Ошибка';icon='?';tip='Ход заметно ухудшил позицию. Лучший ход движка: '+best+'.'}
-     else{label='Зевок';icon='??';tip='Ход резко ухудшил оценку позиции. Лучший ход движка: '+best+'.'}
-     const scoreText='Потеря оценки: '+(loss/100).toFixed(2)+' пешки';
-     evalCache[job.n]={label,icon,text:tip,score:scoreText,best};
-     activeJob=null;engineBusy=false;
-     if(index===job.n)render();
-     startQueuedAnalysis();
-    }
+   if(!line.startsWith('bestmove'))return;
+   const best=line.split(/\\s+/)[1]||'';
+   if(job.phase==='before'){
+    job.best=best;job.before=job.latest;job.latest=null;job.phase='after';
+    engine.postMessage('position fen '+positionAt(job.n).fen());engine.postMessage('go depth 14');return;
    }
+   job.after=job.latest;
+   const cp=s=>!s?0:s.type==='mate'?(s.value>0?10000-Math.abs(s.value)*10:-10000+Math.abs(s.value)*10):s.value;
+   const played=history[job.n-1],playedUci=played.from+played.to+(played.promotion||'');
+   const loss=Math.max(0,cp(job.before)+cp(job.after));
+   const before=positionAt(job.n-1),materialDelta=materialBalance(positionAt(job.n),played.color)-materialBalance(before,played.color);
+   let label,icon,tip;
+   if(best!==playedUci&&materialDelta<=-1&&loss<=35){label='Блестящий ход';icon='!!';tip='Жертва материала не ухудшила оценку позиции по расчёту Stockfish. Такой ход требует тактического обоснования.'}
+   else if(best===playedUci){label='Лучший ход';icon='◆';tip='Ход совпал с первым выбором Stockfish на глубине 14.'}
+   else if(loss<=25){label='Отличный ход';icon='★';tip='Оценка позиции изменилась незначительно. Ход практически не уступает лучшему варианту.'}
+   else if(loss<=65){label='Хороший ход';icon='✓';tip='Небольшая потеря точности. Позиция в основном сохраняет свою оценку.'}
+   else if(loss<=130){label='Неточность';icon='?!';tip='Ход ухудшил оценку позиции. Лучший вариант: '+uciToSan(before.fen(),best)+'.'}
+   else if(loss<=250){label='Ошибка';icon='?';tip='Ход заметно ухудшил позицию. Лучше было: '+uciToSan(before.fen(),best)+'.'}
+   else{label='Зевок';icon='??';tip='Ход резко ухудшил оценку позиции. Лучший вариант: '+uciToSan(before.fen(),best)+'.'}
+   const score='Изменение оценки: '+(loss/100).toFixed(2)+' пешки';
+   evalCache[job.n]={label,icon,text:tip,score,best:best?uciToSan(before.fen(),best):''};
+   activeJob=null;engineBusy=false;renderMoves();if(index===job.n)render();startQueuedAnalysis();
   };
-  engine.onerror=()=>{$('analysis').innerHTML='<div class="muted">Не удалось загрузить Stockfish. Проверьте интернет-соединение и откройте сайт повторно.</div>';engine=null;engineBusy=false;engineReady=false};
+  engine.onerror=()=>{engineFailed=true;engineBusy=false;activeJob=null;$('analysis').innerHTML='<div class="muted">Stockfish не загрузился. Проверьте подключение к интернету и попробуйте обновить страницу.</div>'};
   engine.postMessage('uci');
- }catch(e){engine=null;$('analysis').innerHTML='<div class="muted">Stockfish не удалось запустить в этом браузере.</div>'}
+ }catch(e){engineFailed=true;$('analysis').innerHTML='<div class="muted">Stockfish не удалось запустить в этом браузере.</div>'}
+}
+function queueFullGame(){
+ if(engineFailed)return;
+ analysisQueue=[];for(let n=1;n<=history.length;n++)if(!evalCache[n])analysisQueue.push(n);
+ initEngine();if(engineReady)startQueuedAnalysis();
+ $('analysis').innerHTML='<div class="grade">Stockfish 16</div><div class="advice">Поставлена в очередь вся партия: '+history.length+' полуходов. Движок последовательно проверит каждый ход.</div>';
 }
 function analyzeCurrent(){
- if(index===0||evalCache[index])return;
- initEngine();
- if(!engine)return;
- if(activeJob&&activeJob.n===index)return;
- queuedIndex=index;
- if(engineBusy){analysisToken++;engine.postMessage('stop');return}
- if(engineReady)startQueuedAnalysis();
+ if(index===0)return;
+ if(evalCache[index]){showAnalysis();return}
+ if(!engine&&!engineFailed)initEngine();
+ if(!engineFailed&&!engineReady&& !engineBusy)return;
+ if(!activeJob&&!engineBusy&&engineReady)startQueuedAnalysis();
+ showAnalysis();
 }
 const baseRender=render;
 render=function(){baseRender();analyzeCurrent()};
+queueFullGame();
