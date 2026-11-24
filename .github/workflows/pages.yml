@@ -36,6 +36,37 @@ jobs:
           cp package/src/stockfish-nnue-16-single.wasm dist/engine/
           cp package/src/nn-5af11540bbfe.nnue dist/engine/
           cp package/Copying.txt dist/engine/STOCKFISH-LICENSE.txt
+      - name: Validate JavaScript and bundled PGN
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          html = Path("index.html").read_text()
+          scripts = re.findall(r"<script>([\\s\\S]*?)</script>", html)
+          if not scripts:
+              raise SystemExit("Inline application script was not found")
+          Path("/tmp/chessmes.js").write_text("\\n".join(scripts))
+          match = re.search(r"const START_PGN = `([\\s\\S]*?)`;", html)
+          if not match:
+              raise SystemExit("Default PGN was not found")
+          Path("/tmp/chessmes-pgn.json").write_text(json.dumps(match.group(1)))
+          PY
+          node --check /tmp/chessmes.js
+          npm pack chess.js@0.10.3
+          mkdir -p /tmp/chessjs
+          tar -xzf chess.js-0.10.3.tgz -C /tmp/chessjs
+          cat > /tmp/check-pgn.js <<'JS'
+          const Chess = require('/tmp/chessjs/package');
+          const fs = require('fs');
+          const pgn = JSON.parse(fs.readFileSync('/tmp/chessmes-pgn.json', 'utf8'));
+          const game = new Chess();
+          if (!game.load_pgn(pgn, { sloppy: true })) throw new Error('Default PGN failed to parse');
+          const count = game.history().length;
+          if (count !== 118) throw new Error('Expected 118 half-moves, got ' + count);
+          console.log('Validated default PGN:', count, 'half-moves');
+          JS
+          node /tmp/check-pgn.js
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
