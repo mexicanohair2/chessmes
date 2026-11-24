@@ -85,7 +85,76 @@ $('prev').onclick=()=>{if(index>0){index--;render()}};$('next').onclick=()=>{if(
 $('load').onclick=async()=>{let pgn=$('pgn').value.trim();if(!pgn){const url=$('gameUrl').value.trim(),nick=$('nick').value.trim();if(!url){$('loadStatus').textContent='Вставьте PGN или ссылку на партию.';return}if(!nick){$('loadStatus').textContent='Для загрузки по ссылке укажите ник одного из игроков.';return}try{$('loadStatus').textContent='Ищу партию в публичном архиве Chess.com…';const archives=await fetch('https://api.chess.com/pub/player/'+encodeURIComponent(nick.toLowerCase())+'/games/archives').then(r=>{if(!r.ok)throw Error();return r.json()});const id=(url.match(/(\d{6,})\/?(?:\?.*)?$/)||[])[1];if(!id)throw Error('Не удалось определить ID партии из ссылки.');let found=null;for(const a of (archives.archives||[]).slice(-18).reverse()){const month=await fetch(a).then(r=>r.json());found=(month.games||[]).find(x=>String(x.url).includes(id));if(found)break}if(!found?.pgn)throw Error('Партия не найдена в доступном публичном архиве. Вставьте PGN вручную.');pgn=found.pgn;$('pgn').value=pgn}catch(e){$('loadStatus').textContent=e.message||'Не удалось получить партию. Вставьте PGN вручную.';return}}
  try{setPgn(pgn)}catch(e){$('loadStatus').textContent=e.message}}
 $('pgn').value=START_PGN;setPgn(START_PGN);
-function initEngine(){if(engine)return;try{engine=new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16-single.js');engine.onmessage=e=>{const line=String(e.data);if(line==='uciok'){engineReady=true;engine.postMessage('isready')}if(line.startsWith('bestmove')){const best=line.split(' ')[1];const n=engine.pendingIndex;if(n){const m=history[n-1];evalCache[n]={icon:'◆',label:'Ход Stockfish',text:'Движок вычислил лучший ответ для этой позиции. Сравнение с сыгранным ходом появится после расширенного анализа.',best:best,score:'Анализ Stockfish'};render()}}};engine.postMessage('uci')}catch(e){engine=null}}
-function analyzeCurrent(){if(index===0)return;initEngine();if(!engine){$('analysis').innerHTML='<div class="muted">Stockfish не удалось запустить. Проверьте подключение к интернету.</div>';return}const g=positionAt(index);engine.pendingIndex=index;engine.postMessage('position fen '+g.fen());engine.postMessage('go depth 13');$('analysis').innerHTML='<div class="grade">⌛ Stockfish</div><div class="advice">Анализирует позицию…</div>'}
-const originalRender=render;render=function(){originalRender();if(index>0&&!evalCache[index])analyzeCurrent()};
-</script></body></html>
+let engineBusy=false, queuedIndex=0, activeJob=null, analysisToken=0;
+function startQueuedAnalysis(){
+ if(!engineReady||engineBusy||!queuedIndex)return;
+ const n=queuedIndex;queuedIndex=0;
+ if(n<1||n>history.length||evalCache[n])return;
+ const before=positionAt(n-1),after=positionAt(n),token=++analysisToken;
+ activeJob={n,token,phase:'before',best:'',scoreBefore:null,scoreAfter:null,latest:null};
+ engineBusy=true;
+ engine.postMessage('ucinewgame');
+ engine.postMessage('position fen '+before.fen());
+ engine.postMessage('go depth 12');
+ $('analysis').innerHTML='<div class="grade">⌛ Stockfish 16</div><div class="move-title">'+(history[n-1].color==='w'?'Белые':'Чёрные')+': '+history[n-1].san+'</div><div class="advice">Движок оценивает позицию до и после хода. Это может занять несколько секунд.</div>';
+}
+function initEngine(){
+ if(engine)return;
+ try{
+  engine=new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16-single.js');
+  engine.onmessage=e=>{
+   const line=String(e.data);
+   if(line==='uciok'){engine.postMessage('isready');return}
+   if(line==='readyok'){engineReady=true;startQueuedAnalysis();return}
+   if(!activeJob)return;
+   const job=activeJob;
+   if(line.startsWith('info ')&&line.includes(' score ')){
+    const cp=line.match(/ score cp (-?\d+)/),mate=line.match(/ score mate (-?\d+)/);
+    if(cp)job.latest={type:'cp',value:Number(cp[1])};
+    else if(mate)job.latest={type:'mate',value:Number(mate[1])};
+    return;
+   }
+   if(line.startsWith('bestmove')){
+    if(job.token!==analysisToken){activeJob=null;engineBusy=false;startQueuedAnalysis();return}
+    const best=line.split(/\s+/)[1]||'';
+    if(job.phase==='before'){
+     job.best=best;job.scoreBefore=job.latest;job.latest=null;job.phase='after';
+     engine.postMessage('position fen '+positionAt(job.n).fen());
+     engine.postMessage('go depth 12');
+    }else{
+     job.scoreAfter=job.latest;
+     const toCp=s=>!s?0:s.type==='mate'?(s.value>0?10000-Math.abs(s.value)*10:-10000+Math.abs(s.value)*10):s.value;
+     const before=toCp(job.scoreBefore);
+     const afterForMover=-toCp(job.scoreAfter);
+     const loss=Math.max(0,before-afterForMover);
+     const played=history[job.n-1].from+history[job.n-1].to+(history[job.n-1].promotion||'');
+     let label,icon,tip;
+     if(best===played){label='Лучший ход';icon='◆';tip='Вы сыграли лучший ход по расчёту Stockfish на этой глубине.'}
+     else if(loss<=25){label='Отличный ход';icon='★';tip='Ход почти не ухудшил оценку позиции. Существенно лучшего практического решения движок не показывает.'}
+     else if(loss<=65){label='Хороший ход';icon='✓';tip='Ход сохраняет большую часть преимуществ. Можно было сыграть немного точнее.'}
+     else if(loss<=130){label='Неточность';icon='?!';tip='После этого хода оценка позиции ухудшилась. Стоило проверить более активный вариант.'}
+     else if(loss<=250){label='Ошибка';icon='?';tip='Ход заметно ухудшил позицию. Лучший ход движка: '+best+'.'}
+     else{label='Зевок';icon='??';tip='Ход резко ухудшил оценку позиции. Лучший ход движка: '+best+'.'}
+     const scoreText='Потеря оценки: '+(loss/100).toFixed(2)+' пешки';
+     evalCache[job.n]={label,icon,text:tip,score:scoreText,best};
+     activeJob=null;engineBusy=false;
+     if(index===job.n)render();
+     startQueuedAnalysis();
+    }
+   }
+  };
+  engine.onerror=()=>{$('analysis').innerHTML='<div class="muted">Не удалось загрузить Stockfish. Проверьте интернет-соединение и откройте сайт повторно.</div>';engine=null;engineBusy=false;engineReady=false};
+  engine.postMessage('uci');
+ }catch(e){engine=null;$('analysis').innerHTML='<div class="muted">Stockfish не удалось запустить в этом браузере.</div>'}
+}
+function analyzeCurrent(){
+ if(index===0||evalCache[index])return;
+ initEngine();
+ if(!engine)return;
+ if(activeJob&&activeJob.n===index)return;
+ queuedIndex=index;
+ if(engineBusy){analysisToken++;engine.postMessage('stop');return}
+ if(engineReady)startQueuedAnalysis();
+}
+const baseRender=render;
+render=function(){baseRender();analyzeCurrent()};
