@@ -27,7 +27,7 @@ with source.open("r", encoding="utf-8", newline="") as handle:
             board.push(move)
             ply += 1
             # FEN's first four fields identify the position, including castling and en-passant rights.
-            key = " ".join(board.fen().split()[:4])
+            key = " ".join(board.fen(en_passant="fen").split()[:4])
             candidate = {"eco": row.get("eco", ""), "name": row.get("name", ""), "ply": ply}
             previous = lookup.get(key)
             if previous is None or (candidate["ply"], len(candidate["name"])) > (previous["ply"], len(previous["name"])):
