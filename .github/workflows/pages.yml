@@ -43,10 +43,10 @@ jobs:
           import json, re
           from pathlib import Path
           html = Path("index.html").read_text()
-          scripts = re.findall(r"<script>([\\s\\S]*?)</script>", html)
+          scripts = re.findall(r"<script>([\s\S]*?)</script>", html)
           if not scripts:
               raise SystemExit("Inline application script was not found")
-          Path("/tmp/chessmes.js").write_text("\\n".join(scripts))
+          Path("/tmp/chessmes.js").write_text("\n".join(scripts))
           match = re.search(r"const START_PGN = `([\\s\\S]*?)`;", html)
           if not match:
               raise SystemExit("Default PGN was not found")
