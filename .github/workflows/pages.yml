@@ -53,7 +53,7 @@ jobs:
           scripts = re.findall(r"<script>([\s\S]*?)</script>", html)
           if not scripts:
               raise SystemExit("Inline application script was not found")
-          Path("/tmp/chessmes.js").write_text(String.fromCharCode(10).join(scripts))
+          Path("/tmp/chessmes.js").write_text(chr(10).join(scripts))
           for forbidden in ("START_PGN", "Mishalox228337", "Olezhek_y"):
               if forbidden in html:
                   raise SystemExit("Removed sample data is still present: " + forbidden)
