@@ -69,8 +69,8 @@ const START_PGN = `[Site "Chess.com"]
 let game = new Chess(), history=[], index=0, userColor='w', engine=null, engineReady=false, evalCache={};
 const $=id=>document.getElementById(id);
 const glyph={wk:'♔',wq:'♕',wr:'♖',wb:'♗',wn:'♘',wp:'♙',bk:'♚',bq:'♛',br:'♜',bb:'♝',bn:'♞',bp:'♟'};
-function headers(pgn,key){const m=pgn.match(new RegExp('\\['+key+'\\s+"([^"]*)"\\]','i'));return m?m[1]:''}
-function parse(pgn){const g=new Chess();const ok=g.load_pgn(pgn,{strict:false});if(!ok)throw Error('PGN не удалось прочитать. Проверьте запись ходов.');return {g,h:g.history({verbose:true})}}
+function headers(pgn,key){const m=pgn.match(new RegExp('\\['+key+'\s+"([^"]*)"\\]','i'));return m?m[1]:''}
+function parse(pgn){const g=new Chess();const ok=g.load_pgn(pgn,{sloppy:true});if(!ok)throw Error('PGN не удалось прочитать. Проверьте запись ходов.');return {g,h:g.history({verbose:true})}}
 function positionAt(n){const g=new Chess();for(let i=0;i<n;i++)g.move(history[i]);return g}
 function render(){const g=positionAt(index), board=$('board');board.innerHTML='';const rows=userColor==='w'?[8,7,6,5,4,3,2,1]:[1,2,3,4,5,6,7,8], files=userColor==='w'?'abcdefgh'.split(''):'hgfedcba'.split('');const last=index?history[index-1]:null;
  rows.forEach((rank,ri)=>files.forEach((file,fi)=>{const sq=file+rank,p=g.get(sq),el=document.createElement('div');el.className='square '+((ri+fi)%2?'dark':'light');if(last&&(last.from===sq||last.to===sq))el.classList.add('last');if(p){const span=document.createElement('span');span.className='piece '+(p.color==='w'?'white-piece':'black-piece');span.textContent=glyph[p.color+p.type];el.append(span)}if(fi===0){const c=document.createElement('span');c.className='coord';c.textContent=rank;el.append(c)}if(ri===7){const c=document.createElement('span');c.className='coord';c.style.left='auto';c.style.right='3px';c.textContent=file;el.append(c)}if(last&&last.to===sq&&index){const mk=document.createElement('span');mk.className='mark';mk.textContent=evalCache[index]?.icon||'';el.append(mk)}board.append(el)}));
@@ -82,7 +82,7 @@ function showAnalysis(){const box=$('analysis');if(index===0){box.innerHTML='<di
 function renderMoves(){const el=$('moves');el.innerHTML='';history.forEach((m,i)=>{const n=i+1,info=evalCache[n],b=document.createElement('button');b.className='move-chip';b.dataset.ply=n;b.textContent=(i%2===0?Math.floor(i/2)+1+'. ':'')+m.san+(info?'  '+info.icon:'');b.title=info?info.label:'Ожидает анализа Stockfish';b.onclick=()=>{index=n;render()};el.append(b)})}
 function setPgn(pgn){const parsed=parse(pgn);history=parsed.h;index=0;evalCache={};const w=headers(pgn,'White')||'Белые',b=headers(pgn,'Black')||'Чёрные';$('whiteName').textContent=w;$('blackName').textContent=b;const nick=$('nick').value.trim().toLowerCase();userColor=nick&&nick===w.toLowerCase()?'w':nick&&nick===b.toLowerCase()?'b':'w';$('whiteRole').textContent=userColor==='w'?'Вы':'Соперник';$('blackRole').textContent=userColor==='b'?'Вы':'Соперник';if(nick&&nick!==w.toLowerCase()&&nick!==b.toLowerCase())$('loadStatus').textContent='Ник не совпал с именами игроков PGN. Доска показана со стороны белых.';else $('loadStatus').textContent='Партия загружена: '+history.length+' полуходов. Стрелки листают по одному полуходу.';renderMoves();render()}
 $('prev').onclick=()=>{if(index>0){index--;render()}};$('next').onclick=()=>{if(index<history.length){index++;render()}};
-$('load').onclick=async()=>{let pgn=$('pgn').value.trim();if(!pgn){const url=$('gameUrl').value.trim(),nick=$('nick').value.trim();if(!url){$('loadStatus').textContent='Вставьте PGN или ссылку на партию.';return}if(!nick){$('loadStatus').textContent='Для загрузки по ссылке укажите ник одного из игроков.';return}try{$('loadStatus').textContent='Ищу партию в публичном архиве Chess.com…';const archives=await fetch('https://api.chess.com/pub/player/'+encodeURIComponent(nick.toLowerCase())+'/games/archives').then(r=>{if(!r.ok)throw Error();return r.json()});const id=(url.match(/(\d{6,})\/?(?:\?.*)?$/)||[])[1];if(!id)throw Error('Не удалось определить ID партии из ссылки.');let found=null;for(const a of (archives.archives||[]).slice(-18).reverse()){const month=await fetch(a).then(r=>r.json());found=(month.games||[]).find(x=>String(x.url).includes(id));if(found)break}if(!found?.pgn)throw Error('Партия не найдена в доступном публичном архиве. Вставьте PGN вручную.');pgn=found.pgn;$('pgn').value=pgn}catch(e){$('loadStatus').textContent=e.message||'Не удалось получить партию. Вставьте PGN вручную.';return}}
+$('load').onclick=async()=>{let pgn=$('pgn').value.trim();if(!pgn){const url=$('gameUrl').value.trim(),nick=$('nick').value.trim();if(!url){$('loadStatus').textContent='Вставьте PGN или ссылку на партию.';return}if(!nick){$('loadStatus').textContent='Для загрузки по ссылке укажите ник одного из игроков.';return}try{$('loadStatus').textContent='Ищу партию в публичном архиве Chess.com…';const archives=await fetch('https://api.chess.com/pub/player/'+encodeURIComponent(nick.toLowerCase())+'/games/archives').then(r=>{if(!r.ok)throw Error();return r.json()});const id=(url.match(/(\d{6,})\/?(?:\?.*)?$/)||[])[1];if(!id)throw Error('Не удалось определить ID партии из ссылки.');let found=null;for(const a of (archives.archives||[]).slice().reverse()){const month=await fetch(a).then(r=>r.json());found=(month.games||[]).find(x=>String(x.url).includes(id));if(found)break}if(!found?.pgn)throw Error('Партия не найдена в доступном публичном архиве. Вставьте PGN вручную.');pgn=found.pgn;$('pgn').value=pgn}catch(e){$('loadStatus').textContent=e.message||'Не удалось получить партию. Вставьте PGN вручную.';return}}
  try{setPgn(pgn);queueFullGame()}catch(e){$('loadStatus').textContent=e.message}}
 $('pgn').value=START_PGN;setPgn(START_PGN);
 let engineBusy=false, activeJob=null, analysisQueue=[], engineFailed=false;
@@ -109,12 +109,12 @@ function initEngine(){
    if(!activeJob)return;
    const job=activeJob;
    if(line.startsWith('info ')&&line.includes(' score ')){
-    const cp=line.match(/ score cp (-?\\d+)/),mate=line.match(/ score mate (-?\\d+)/);
+    const cp=line.match(/ score cp (-?\d+)/),mate=line.match(/ score mate (-?\d+)/);
     if(cp)job.latest={type:'cp',value:Number(cp[1])};else if(mate)job.latest={type:'mate',value:Number(mate[1])};
     return;
    }
    if(!line.startsWith('bestmove'))return;
-   const best=line.split(/\\s+/)[1]||'';
+   const best=line.split(/\s+/)[1]||'';
    if(job.phase==='before'){
     job.best=best;job.before=job.latest;job.latest=null;job.phase='after';
     engine.postMessage('position fen '+positionAt(job.n).fen());engine.postMessage('go depth 14');return;
