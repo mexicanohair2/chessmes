@@ -23,49 +23,46 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Prepare site and Stockfish 16
+
+      - name: Prepare site, Stockfish and piece artwork
         run: |
           set -euo pipefail
-          mkdir -p dist/engine
+          mkdir -p dist/engine dist/pieces
           cp index.html dist/index.html
+          cp ATTRIBUTIONS.md dist/ATTRIBUTIONS.md
+
           npm pack stockfish@16.0.0
           tar -xzf stockfish-16.0.0.tgz
           cp package/src/stockfish-nnue-16-single.js dist/engine/
           cp package/src/stockfish-nnue-16-single.wasm dist/engine/
           cp package/src/nn-5af11540bbfe.nnue dist/engine/
           cp package/Copying.txt dist/engine/STOCKFISH-LICENSE.txt
-      - name: Validate JavaScript and bundled PGN
+
+          for piece in wK wQ wR wB wN wP bK bQ bR bB bN bP; do
+            curl -fsSL "https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${piece}.svg" -o "dist/pieces/${piece}.svg"
+            test -s "dist/pieces/${piece}.svg"
+          done
+
+      - name: Validate JavaScript and bundled assets
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, re
+          import re
           from pathlib import Path
           html = Path("index.html").read_text()
-          scripts = re.findall(r"<script>([\s\S]*?)</script>", html)
+          scripts = re.findall(r"<script>([\\s\\S]*?)</script>", html)
           if not scripts:
               raise SystemExit("Inline application script was not found")
-          Path("/tmp/chessmes.js").write_text("\n".join(scripts))
-          match = re.search(r"const START_PGN = `([\s\S]*?)`;", html)
-          if not match:
-              raise SystemExit("Default PGN was not found")
-          Path("/tmp/chessmes-pgn.json").write_text(json.dumps(match.group(1)))
+          Path("/tmp/chessmes.js").write_text("\\n".join(scripts))
+          for forbidden in ("START_PGN", "Mishalox228337", "Olezhek_y"):
+              if forbidden in html:
+                  raise SystemExit("Removed sample data is still present: " + forbidden)
           PY
           node --check /tmp/chessmes.js
-          npm pack chess.js@0.10.3
-          mkdir -p /tmp/chessjs
-          tar -xzf chess.js-0.10.3.tgz -C /tmp/chessjs
-          cat > /tmp/check-pgn.js <<'JS'
-          const ChessModule = require('/tmp/chessjs/package');
-          const Chess = ChessModule.Chess || ChessModule;
-          const fs = require('fs');
-          const pgn = JSON.parse(fs.readFileSync('/tmp/chessmes-pgn.json', 'utf8'));
-          const game = new Chess();
-          if (!game.load_pgn(pgn, { sloppy: true })) throw new Error('Default PGN failed to parse');
-          const count = game.history().length;
-          if (count !== 118) throw new Error('Expected 118 half-moves, got ' + count);
-          console.log('Validated default PGN:', count, 'half-moves');
-          JS
-          node /tmp/check-pgn.js
+          test -s dist/pieces/wK.svg
+          test -s dist/pieces/bK.svg
+          test -s dist/engine/stockfish-nnue-16-single.wasm
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
@@ -73,6 +70,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
