@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#171a1e"><title>Chessmes — разбор партии</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.4.0/chess.min.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#171a1e;--panel:#22272d;--panel2:#292f36;--line:#3a424b;--muted:#9ba6b2;--text:#eef1f4;--green:#81b64c;--green2:#a3cf6b;--light:#eeeed2;--dark:#769656}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#303943 0,#171a1e 55%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+header{height:64px;border-bottom:1px solid #ffffff12;display:flex;align-items:center;justify-content:space-between;padding:0 max(18px,calc((100vw - 1180px)/2));background:#15181dcc}
+.brand{font-size:22px;font-weight:850;letter-spacing:-1px}.brand span{color:var(--green2)}.status{font-size:12px;color:var(--muted)}
+main{max-width:1180px;margin:26px auto;padding:0 18px;display:grid;grid-template-columns:minmax(300px,650px) minmax(280px,1fr);gap:22px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px #0003}
+.board-panel{padding:14px}.players{display:flex;justify-content:space-between;align-items:center;padding:2px 3px 12px}.player{display:flex;align-items:center;gap:9px;font-weight:650}.avatar{width:30px;height:30px;border-radius:8px;background:#3c4650;display:grid;place-items:center;font-size:18px}.rating{font-size:12px;color:var(--muted);font-weight:500}
+#board{width:100%;aspect-ratio:1;display:grid;grid-template-columns:repeat(8,1fr);overflow:hidden;border-radius:5px;touch-action:manipulation}
+.square{position:relative;display:grid;place-items:center;aspect-ratio:1;min-width:0}.square.light{background:var(--light)}.square.dark{background:var(--dark)}.piece{font-family:"Arial Unicode MS",serif;font-size:clamp(27px,6.4vw,58px);line-height:1;user-select:none;filter:drop-shadow(0 1px 1px #0004);z-index:2}.white-piece{color:#fff;text-shadow:0 1px 2px #333,1px 0 #555,-1px 0 #555,0 -1px #555}.black-piece{color:#202329;text-shadow:0 1px 1px #fff8}
+.square.last{background-image:linear-gradient(#f6f66988,#f6f66988)}.square .coord{position:absolute;font-size:10px;font-weight:700;left:3px;bottom:1px;opacity:.75}.light .coord{color:#769656}.dark .coord{color:#f0f0ce}.mark{position:absolute;right:2px;top:0;font-size:clamp(13px,2.8vw,22px);z-index:4;filter:drop-shadow(0 1px 2px #000)}
+.controls{display:flex;justify-content:center;align-items:center;gap:9px;padding:13px 0 4px}.nav{border:1px solid var(--line);background:#303840;color:white;border-radius:9px;width:48px;height:42px;font-size:24px;cursor:pointer}.nav:active{background:#46525d;transform:scale(.97)}.nav:disabled{opacity:.35;cursor:default}.ply{font-variant-numeric:tabular-nums;color:#c5ccd3;min-width:100px;text-align:center;font-size:13px}
+.side{display:flex;flex-direction:column;gap:14px}.section{padding:17px}.section h2{font-size:16px;margin:0 0 12px}.muted{color:var(--muted);font-size:13px}
+label{display:block;color:#cbd2d9;font-size:12px;margin:12px 0 6px}input,textarea{width:100%;background:#171c21;border:1px solid #414a54;border-radius:8px;color:var(--text);padding:11px 12px;font:inherit;outline:none}input:focus,textarea:focus{border-color:var(--green)}textarea{min-height:104px;resize:vertical;font-family:ui-monospace,monospace;font-size:12px}
+button.primary{width:100%;background:var(--green);border:0;border-radius:8px;color:#172012;padding:11px;font-weight:800;font-size:14px;margin-top:12px;cursor:pointer}button.primary:disabled{opacity:.55}
+.notice{margin-top:10px;color:var(--muted);font-size:12px}.move-info{min-height:170px}.grade{display:inline-flex;align-items:center;gap:7px;background:#343d35;color:#c9e7a9;padding:5px 9px;border-radius:7px;font-weight:750;font-size:12px;margin-bottom:10px}.move-title{font-size:20px;font-weight:800;margin:0 0 7px}.advice{font-size:13px;color:#d2d8de}.eval{font-variant-numeric:tabular-nums;color:var(--green2);font-weight:700}
+.moves{display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow:auto}.move-chip{border:1px solid #414a54;border-radius:6px;padding:5px 8px;font-size:12px;color:#c8d0d8;background:#1c2228;cursor:pointer}.move-chip.active{background:#526b3b;border-color:#8db65c;color:white}
+footer{max-width:1180px;margin:0 auto;padding:0 18px 28px;color:#7f8994;font-size:11px}
+@media(max-width:800px){main{grid-template-columns:1fr;margin:14px auto;gap:13px;max-width:620px}.board-panel{padding:10px}.piece{font-size:clamp(28px,10vw,54px)}.section{padding:14px}header{height:56px}.move-info{min-height:0}}
+</style></head>
+<body>
+<header><div class="brand">CHESS<span>MES</span></div><div class="status">Разбор шахматных партий</div></header>
+<main>
+<section class="panel board-panel">
+ <div class="players"><div class="player"><div class="avatar">♙</div><div><div id="blackName">Чёрные</div><div class="rating">Соперник</div></div></div><div class="player"><div class="avatar">♙</div><div><div id="whiteName">Белые</div><div class="rating">Вы</div></div></div></div>
+ <div id="board" aria-label="Шахматная доска"></div>
+ <div class="controls">
+  <button class="nav" id="prev" aria-label="Предыдущий ход">←</button>
+  <div class="ply" id="ply">Начальная позиция</div>
+  <button class="nav" id="next" aria-label="Следующий ход">→</button>
+ </div>
+</section>
+<aside class="side">
+ <section class="panel section">
+  <h2>Загрузить партию</h2>
+  <label for="nick">Ваш ник на Chess.com</label><input id="nick" placeholder="Например, Mishalox228337" autocomplete="off">
+  <label for="gameUrl">Ссылка на партию (необязательно, если вставляете PGN)</label><input id="gameUrl" placeholder="https://www.chess.com/game/live/…">
+  <label for="pgn">PGN партии</label><textarea id="pgn" placeholder="[White &quot;Player1&quot;]&#10;[Black &quot;Player2&quot;]&#10;&#10;1. e4 e5 2. Nf3 Nc6 ..."></textarea>
+  <button class="primary" id="load">Загрузить и разобрать</button>
+  <div class="notice" id="loadStatus">Можно вставить PGN целиком или указать ссылку на публичную партию Chess.com.</div>
+ </section>
+ <section class="panel section move-info">
+  <h2>Анализ текущего хода</h2>
+  <div id="analysis"><div class="muted">Перейдите стрелкой →, чтобы посмотреть следующий ход и его оценку.</div></div>
+ </section>
+ <section class="panel section">
+  <h2>Ходы партии</h2><div class="moves" id="moves"><span class="muted">После загрузки здесь появится список ходов.</span></div>
+ </section>
+</aside>
+</main>
+<footer>Chessmes · Анализ выполняется в браузере. Stockfish загружается отдельно при запуске анализа.</footer>
+<script>
+const START_PGN = `[Site "Chess.com"]
+[Date "2026-11-25"]
+[White "Mishalox228337"]
+[Black "Olezhek_y"]
+[Result "0-1"]
+[WhiteElo "288"]
+[BlackElo "304"]
+[TimeControl "600"]
+
+1. e3 d5 2. Nf3 Nc6 3. Nc3 e5 4. d4 e4 5. Ng5 Nf6 6. Nh3 Bxh3 7. gxh3 Bb4 8. Bg2 Qd7 9. a3 Bxc3+ 10. bxc3 O-O-O 11. f3 exf3 12. Bxf3 Qxh3 13. c4 a6 14. cxd5 Nxd5 15. Bxd5 Rhe8 16. Rb1 Nxd4 17. Qxd4 Rxe3+ 18. Bxe3 Qh4+ 19. Bf2 Qxd4 20. Bxd4 Rxd5 21. c4 Rxd4 22. Rf1 Re4+ 23. Kf2 Rxc4 24. Kg2 Rc2+ 25. Rf2 Rxf2+ 26. Kxf2 f5 27. Re1 g5 28. Re5 h6 29. Rxf5 b5 30. Kg3 c6 31. Kg4 a5 32. Kh5 b4 33. axb4 axb4 34. Rf8+ Kd7 35. Kxh6 g4 36. Rg8 b3 37. Rb8 c5 38. Rxb3 c4 39. Rc3 Kc6 40. Rg3 Kc5 41. h4 Kd4 42. h5 c3 43. Kg6 c2 44. Rg1 Kd3 45. h6 Kd2 46. h7 c1=Q 47. Rxg4 Qc2+ 48. Kh5 Qc5+ 49. Kh6 Qe3+ 50. Kh5 Qh3+ 51. Kg5 Qxh7 52. Rd4+ Ke3 53. Rd5 Ke4 54. Rd1 Qf5+ 55. Kh4 Kf4 56. Rg1 Qf6+ 57. Kh5 Qh8+ 58. Kg6 Qg8+ 59. Kf6 Qxg1 0-1`;
+let game = new Chess(), history=[], index=0, userColor='w', engine=null, engineReady=false, evalCache={};
+const $=id=>document.getElementById(id);
+const glyph={wk:'♔',wq:'♕',wr:'♖',wb:'♗',wn:'♘',wp:'♙',bk:'♚',bq:'♛',br:'♜',bb:'♝',bn:'♞',bp:'♟'};
+function headers(pgn,key){const m=pgn.match(new RegExp('\\['+key+'\\s+"([^"]*)"\\]','i'));return m?m[1]:''}
+function parse(pgn){const g=new Chess();const ok=g.load_pgn(pgn,{strict:false});if(!ok)throw Error('PGN не удалось прочитать. Проверьте запись ходов.');return {g,h:g.history({verbose:true})}}
+function positionAt(n){const g=new Chess();for(let i=0;i<n;i++)g.move(history[i]);return g}
+function render(){const g=positionAt(index), board=$('board');board.innerHTML='';const rows=userColor==='w'?[8,7,6,5,4,3,2,1]:[1,2,3,4,5,6,7,8], files=userColor==='w'?'abcdefgh'.split(''):'hgfedcba'.split('');const last=index?history[index-1]:null;
+ rows.forEach((rank,ri)=>files.forEach((file,fi)=>{const sq=file+rank,p=g.get(sq),el=document.createElement('div');el.className='square '+((ri+fi)%2?'dark':'light');if(last&&(last.from===sq||last.to===sq))el.classList.add('last');if(p){const span=document.createElement('span');span.className='piece '+(p.color==='w'?'white-piece':'black-piece');span.textContent=glyph[p.color+p.type];el.append(span)}if(fi===0){const c=document.createElement('span');c.className='coord';c.textContent=rank;el.append(c)}if(ri===7){const c=document.createElement('span');c.className='coord';c.style.left='auto';c.style.right='3px';c.textContent=file;el.append(c)}if(last&&last.to===sq&&index){const mk=document.createElement('span');mk.className='mark';mk.textContent=evalCache[index]?.icon||'';el.append(mk)}board.append(el)}));
+ $('ply').textContent=index===0?'Начальная позиция':Math.ceil(index/2)+'. '+(index%2?'Белые':'Чёрные');$('prev').disabled=index===0;$('next').disabled=index>=history.length;
+ document.querySelectorAll('.move-chip').forEach((b)=>b.classList.toggle('active',Number(b.dataset.ply)===index));
+ showAnalysis();
+}
+function showAnalysis(){const box=$('analysis');if(index===0){box.innerHTML='<div class="muted">Начальная позиция. Нажмите →, чтобы воспроизвести первый ход.</div>';return}const m=history[index-1],side=m.color==='w'?'Белые':'Чёрные',info=evalCache[index];if(!info){box.innerHTML='<div class="grade">⌛ Анализ</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">Позиция загружена. Запустите анализ Stockfish, чтобы получить точную оценку и лучший вариант.</div><div class="eval" id="evalNow"></div>';return}box.innerHTML='<div class="grade">'+info.icon+' '+info.label+'</div><div class="move-title">'+side+': '+m.san+'</div><div class="advice">'+info.text+'</div><p class="eval">'+(info.score||'')+(info.best?' · Лучший ход: '+info.best:'')+'</p>'}
+function renderMoves(){const el=$('moves');el.innerHTML='';history.forEach((m,i)=>{const b=document.createElement('button');b.className='move-chip';b.dataset.ply=i+1;b.textContent=(i%2===0?Math.floor(i/2)+1+'. ':'')+m.san;b.onclick=()=>{index=i+1;render()};el.append(b)})}
+function setPgn(pgn){const parsed=parse(pgn);history=parsed.h;index=0;evalCache={};const w=headers(pgn,'White')||'Белые',b=headers(pgn,'Black')||'Чёрные';$('whiteName').textContent=w;$('blackName').textContent=b;const nick=$('nick').value.trim().toLowerCase();userColor=nick&&nick===w.toLowerCase()?'w':nick&&nick===b.toLowerCase()?'b':'w';if(nick&&nick!==w.toLowerCase()&&nick!==b.toLowerCase())$('loadStatus').textContent='Ник не совпал с именами игроков PGN. Доска показана со стороны белых.';else $('loadStatus').textContent='Партия загружена: '+history.length+' полуходов. Стрелки листают по одному ходу.';renderMoves();render()}
+$('prev').onclick=()=>{if(index>0){index--;render()}};$('next').onclick=()=>{if(index<history.length){index++;render()}};
+$('load').onclick=async()=>{let pgn=$('pgn').value.trim();if(!pgn){const url=$('gameUrl').value.trim(),nick=$('nick').value.trim();if(!url){$('loadStatus').textContent='Вставьте PGN или ссылку на партию.';return}if(!nick){$('loadStatus').textContent='Для загрузки по ссылке укажите ник одного из игроков.';return}try{$('loadStatus').textContent='Ищу партию в публичном архиве Chess.com…';const archives=await fetch('https://api.chess.com/pub/player/'+encodeURIComponent(nick.toLowerCase())+'/games/archives').then(r=>{if(!r.ok)throw Error();return r.json()});const id=(url.match(/(\d{6,})\/?(?:\?.*)?$/)||[])[1];if(!id)throw Error('Не удалось определить ID партии из ссылки.');let found=null;for(const a of (archives.archives||[]).slice(-18).reverse()){const month=await fetch(a).then(r=>r.json());found=(month.games||[]).find(x=>String(x.url).includes(id));if(found)break}if(!found?.pgn)throw Error('Партия не найдена в доступном публичном архиве. Вставьте PGN вручную.');pgn=found.pgn;$('pgn').value=pgn}catch(e){$('loadStatus').textContent=e.message||'Не удалось получить партию. Вставьте PGN вручную.';return}}
+ try{setPgn(pgn)}catch(e){$('loadStatus').textContent=e.message}}
+$('pgn').value=START_PGN;setPgn(START_PGN);
+function initEngine(){if(engine)return;try{engine=new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16-single.js');engine.onmessage=e=>{const line=String(e.data);if(line==='uciok'){engineReady=true;engine.postMessage('isready')}if(line.startsWith('bestmove')){const best=line.split(' ')[1];const n=engine.pendingIndex;if(n){const m=history[n-1];evalCache[n]={icon:'◆',label:'Ход Stockfish',text:'Движок вычислил лучший ответ для этой позиции. Сравнение с сыгранным ходом появится после расширенного анализа.',best:best,score:'Анализ Stockfish'};render()}}};engine.postMessage('uci')}catch(e){engine=null}}
+function analyzeCurrent(){if(index===0)return;initEngine();if(!engine){$('analysis').innerHTML='<div class="muted">Stockfish не удалось запустить. Проверьте подключение к интернету.</div>';return}const g=positionAt(index);engine.pendingIndex=index;engine.postMessage('position fen '+g.fen());engine.postMessage('go depth 13');$('analysis').innerHTML='<div class="grade">⌛ Stockfish</div><div class="advice">Анализирует позицию…</div>'}
+const originalRender=render;render=function(){originalRender();if(index>0&&!evalCache[index])analyzeCurrent()};
+</script></body></html>
