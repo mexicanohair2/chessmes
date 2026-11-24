@@ -28,6 +28,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/engine dist/pieces
+          git clone --depth 1 https://github.com/lichess-org/chess-openings.git
+          python3 -m pip install --quiet python-chess
+          make -C chess-openings
+          python3 build_openings.py
+          test -s dist/openings/openings.json
           cp index.html dist/index.html
           cp ATTRIBUTIONS.md dist/ATTRIBUTIONS.md
 
@@ -62,6 +67,7 @@ jobs:
           test -s dist/pieces/wK.svg
           test -s dist/pieces/bK.svg
           test -s dist/engine/stockfish-nnue-16-single.wasm
+          test -s dist/openings/openings.json
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
