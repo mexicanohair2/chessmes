@@ -23,10 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Prepare site and Stockfish 16
         run: |
           set -euo pipefail
@@ -70,6 +66,9 @@ jobs:
           console.log('Validated default PGN:', count, 'half-moves');
           JS
           node /tmp/check-pgn.js
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
