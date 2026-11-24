@@ -19,7 +19,7 @@ main{max-width:1180px;margin:26px auto;padding:0 18px;display:grid;grid-template
 .side{display:flex;flex-direction:column;gap:14px}.section{padding:17px}.section h2{font-size:16px;margin:0 0 12px}.muted{color:var(--muted);font-size:13px}
 label{display:block;color:#cbd2d9;font-size:12px;margin:12px 0 6px}input,textarea{width:100%;background:#171c21;border:1px solid #414a54;border-radius:8px;color:var(--text);padding:11px 12px;font:inherit;outline:none}input:focus,textarea:focus{border-color:var(--green)}textarea{min-height:104px;resize:vertical;font-family:ui-monospace,monospace;font-size:12px}
 button.primary{width:100%;background:var(--green);border:0;border-radius:8px;color:#172012;padding:11px;font-weight:800;font-size:14px;margin-top:12px;cursor:pointer}button.primary:disabled{opacity:.55}
-.notice{margin-top:10px;color:var(--muted);font-size:12px}.move-info{min-height:170px}.grade{display:inline-flex;align-items:center;gap:7px;background:#343d35;color:#c9e7a9;padding:5px 9px;border-radius:7px;font-weight:750;font-size:12px;margin-bottom:10px}.move-title{font-size:20px;font-weight:800;margin:0 0 7px}.advice{font-size:13px;color:#d2d8de}.eval{font-variant-numeric:tabular-nums;color:var(--green2);font-weight:700}
+.notice{margin-top:10px;color:var(--muted);font-size:12px}.move-info{min-height:0;margin:0 0 12px;padding:12px 14px;background:#1c2228;border:1px solid #414a54;border-radius:9px}.move-info h2{font-size:14px;margin:0 0 7px}.move-info .move-title{font-size:16px}.grade{display:inline-flex;align-items:center;gap:7px;background:#343d35;color:#c9e7a9;padding:5px 9px;border-radius:7px;font-weight:750;font-size:12px;margin-bottom:10px}.move-title{font-size:20px;font-weight:800;margin:0 0 7px}.advice{font-size:13px;color:#d2d8de}.eval{font-variant-numeric:tabular-nums;color:var(--green2);font-weight:700}
 .moves{display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow:auto}.move-chip{border:1px solid #414a54;border-radius:6px;padding:5px 8px;font-size:12px;color:#c8d0d8;background:#1c2228;cursor:pointer}.move-chip.active{background:#526b3b;border-color:#8db65c;color:white}
 footer{max-width:1180px;margin:0 auto;padding:0 18px 28px;color:#7f8994;font-size:11px}
 @media(max-width:800px){main{grid-template-columns:1fr;margin:14px auto;gap:13px;max-width:620px}.board-panel{padding:10px}.piece{font-size:clamp(28px,10vw,54px)}.section{padding:14px}header{height:56px}.move-info{min-height:0}}
@@ -29,6 +29,10 @@ footer{max-width:1180px;margin:0 auto;padding:0 18px 28px;color:#7f8994;font-siz
 <main>
 <section class="panel board-panel">
  <div class="players"><div class="player"><div class="avatar">♙</div><div><div id="blackName">Чёрные</div><div class="rating" id="blackRole">Соперник</div></div></div><div class="player"><div class="avatar">♙</div><div><div id="whiteName">Белые</div><div class="rating" id="whiteRole">Вы</div></div></div></div>
+ <div class="move-info">
+  <h2>Анализ текущего хода</h2>
+  <div id="analysis"><div class="muted">Перейдите стрелкой →, чтобы посмотреть следующий ход и его оценку.</div></div>
+ </div>
  <div id="board" aria-label="Шахматная доска"></div>
  <div class="controls">
   <button class="nav" id="prev" aria-label="Предыдущий ход">←</button>
@@ -44,10 +48,6 @@ footer{max-width:1180px;margin:0 auto;padding:0 18px 28px;color:#7f8994;font-siz
   <label for="pgn">PGN партии</label><textarea id="pgn" placeholder="[White &quot;Player1&quot;]&#10;[Black &quot;Player2&quot;]&#10;&#10;1. e4 e5 2. Nf3 Nc6 ..."></textarea>
   <button class="primary" id="load">Загрузить и разобрать</button>
   <div class="notice" id="loadStatus">Можно вставить PGN целиком или указать ссылку на публичную партию Chess.com.</div>
- </section>
- <section class="panel section move-info">
-  <h2>Анализ текущего хода</h2>
-  <div id="analysis"><div class="muted">Перейдите стрелкой →, чтобы посмотреть следующий ход и его оценку.</div></div>
  </section>
  <section class="panel section">
   <h2>Ходы партии</h2><div class="moves" id="moves"><span class="muted">После загрузки здесь появится список ходов.</span></div>
