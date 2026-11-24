@@ -47,7 +47,7 @@ jobs:
           if not scripts:
               raise SystemExit("Inline application script was not found")
           Path("/tmp/chessmes.js").write_text("\n".join(scripts))
-          match = re.search(r"const START_PGN = `([\\s\\S]*?)`;", html)
+          match = re.search(r"const START_PGN = `([\s\S]*?)`;", html)
           if not match:
               raise SystemExit("Default PGN was not found")
           Path("/tmp/chessmes-pgn.json").write_text(json.dumps(match.group(1)))
