@@ -37,7 +37,7 @@ main{max-width:1240px;margin:16px auto;padding:0 16px;display:grid;grid-template
 <footer>Chessmes · Stockfish 16 · Фигуры Cburnett из Lichess (GPL-2.0-or-later). <a href="./engine/STOCKFISH-LICENSE.txt" target="_blank" rel="noopener">Лицензия движка</a> · <a href="./ATTRIBUTIONS.md" target="_blank" rel="noopener">Источники фигур</a></footer>
 <script>const $=id=>document.getElementById(id);
 let history=[],index=0,userColor="w",flipped=false,engine=null,engineReady=false,engineBusy=false,engineFailed=false,activeJob=null,analysisQueue=[],positionEvals={},bestMoves={},moveGrades={};
-function headers(pgn,key){const m=pgn.match(new RegExp("\\["+key+"\\s+\\"([^\\"]*)\\"\\]","i"));return m?m[1]:""}
+function headers(pgn,key){const line=pgn.split(/\r?\n/).find(x=>x.startsWith("["+key+" "));return line?line.slice(line.indexOf('"')+1,line.lastIndexOf('"')):""}
 function parsePgn(pgn){const g=new Chess();const ok=g.load_pgn(pgn,{sloppy:true});if(!ok)throw Error("PGN не удалось прочитать. Проверьте запись ходов.");const h=g.history({verbose:true});if(!h.length)throw Error("В PGN нет ходов. Вставьте запись партии целиком.");return h}
 function positionAt(n){const g=new Chess();for(let i=0;i<n;i++)g.move(history[i]);return g}
 function uciToSan(fen,uci){if(!uci||uci==="(none)")return "—";try{const g=new Chess();g.load(fen);const m={from:uci.slice(0,2),to:uci.slice(2,4)};if(uci.length>4)m.promotion=uci[4];const made=g.move(m);return made?made.san:uci}catch{return uci}}
