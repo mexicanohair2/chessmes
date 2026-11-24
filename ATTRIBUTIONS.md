@@ -13,3 +13,10 @@ The SVG files are downloaded unmodified during the GitHub Pages build and stored
 ## Chess engine
 
 Stockfish 16 browser build is distributed under GPL-3.0-or-later. Its license is included at `engine/STOCKFISH-LICENSE.txt`.
+
+## Opening theory database
+
+- Dataset: Lichess chess-openings, aggregated ECO opening names and move sequences.
+- Source: https://github.com/lichess-org/chess-openings
+- License: CC0 1.0 Public Domain Dedication.
+- The GitHub Pages workflow builds a local FEN lookup from the dataset; no opening API is called by visitors.
