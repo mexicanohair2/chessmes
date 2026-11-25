@@ -35,6 +35,8 @@ jobs:
           test -s dist/openings/openings.json
           cp index.html dist/index.html
           cp ATTRIBUTIONS.md dist/ATTRIBUTIONS.md
+          mkdir -p dist/icons
+          cp icons/move-icons.svg dist/icons/move-icons.svg
 
           npm pack stockfish@16.0.0
           tar -xzf stockfish-16.0.0.tgz
